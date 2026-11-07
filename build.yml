@@ -1,0 +1,32 @@
+name: Build IPA
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Create app from index.html
+        run: |
+          mkdir www
+          cp index.html www/index.html
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6
+          npx cap init son com.son.game --web-dir www
+          npx cap add ios
+          npx cap sync ios
+      - name: Build unsigned app
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+      - name: Make IPA
+        run: |
+          mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r son.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: son-ipa
+          path: son.ipa
